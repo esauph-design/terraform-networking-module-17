@@ -97,3 +97,7 @@ Resource Group
 ```
 
 This module is designed to be reused in future Azure infrastructure deployments.
+
+## Continuous Integration
+
+GitHub Actions runs Terraform formatting, validation, and a read-only plan for pull requests targeting `main`. Azure authentication uses OIDC and GitHub Actions secrets. The workflow does not run `terraform apply`.

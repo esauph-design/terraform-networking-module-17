@@ -1,0 +1,63 @@
+name: Terraform Apply
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: terraform-apply
+  cancel-in-progress: false
+
+jobs:
+  terraform-apply:
+    name: Terraform Apply
+    runs-on: ubuntu-latest
+
+    environment:
+      name: production
+
+    env:
+      ARM_USE_OIDC: true
+      ARM_USE_AZUREAD: true
+      ARM_CLIENT_ID: ${{ secrets.APPLY_AZURE_CLIENT_ID }}
+      ARM_TENANT_ID: ${{ secrets.APPLY_AZURE_TENANT_ID }}
+      ARM_SUBSCRIPTION_ID: ${{ secrets.APPLY_AZURE_SUBSCRIPTION_ID }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Check formatting
+        run: terraform fmt -check -recursive
+
+      - name: Create temporary Terraform variables file
+        env:
+          TERRAFORM_TFVARS: ${{ secrets.TERRAFORM_TFVARS }}
+        run: |
+          printf '%s' "$TERRAFORM_TFVARS" > ci.auto.tfvars
+
+      - name: Initialize Terraform
+        run: terraform init -input=false
+
+      - name: Validate configuration
+        run: terraform validate
+
+      - name: Create plan
+        run: terraform plan -input=false -no-color -out=tfplan.tfplan
+
+      - name: Apply Terraform plan
+        run: terraform apply -input=false -auto-approve tfplan.tfplan
+
+      - name: Remove temporary Terraform files
+        if: always()
+        run: |
+          rm -f ci.auto.tfvars
+          rm -f tfplan.tfplan

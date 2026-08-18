@@ -37,5 +37,15 @@ jobs:
       - name: Validate configuration
         run: terraform validate
 
+      - name: Create temporary Terraform variables file
+        env:
+          TERRAFORM_TFVARS: ${{ secrets.TERRAFORM_TFVARS }}
+        run: |
+          printf '%s' "$TERRAFORM_TFVARS" > ci.auto.tfvars
+
       - name: Create plan
-        run: terraform plan -input=false -no-color -out=tfplan
+        run: terraform plan -input=false -no-color -out=tfplan.tfplan
+
+      - name: Remove temporary Terraform variables file
+        if: always()
+        run: rm -f ci.auto.tfvars tfplan.tfplan
